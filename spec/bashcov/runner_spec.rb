@@ -12,14 +12,14 @@ describe Bashcov::Runner do
     end
   end
 
-  describe "#inject_xtrace_flag!" do
+  describe "#inject_env!" do
     context "without a SHELLOPTS variable" do
       before do
         ENV["SHELLOPTS"] = nil
       end
 
       it "adds the flags" do
-        runner.send(:inject_xtrace_flag!) do
+        runner.send(:inject_env!) do
           expect(ENV["SHELLOPTS"]).to eq("xtrace")
         end
       end
@@ -35,7 +35,7 @@ describe Bashcov::Runner do
       end
 
       it "merges the flags" do
-        runner.send(:inject_xtrace_flag!) do
+        runner.send(:inject_env!) do
           expect(ENV["SHELLOPTS"]).to eq("posix:xtrace")
         end
       end

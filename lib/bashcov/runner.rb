@@ -8,9 +8,12 @@ require "bashcov/xtrace"
 module Bashcov
   # Runs a given command with xtrace enabled then computes code coverage.
   class Runner
+    attr_reader :files
+
     # @param [String] command Command to run
     def initialize(command)
       @command = command
+      @files = {}
     end
 
     # Runs the command with appropriate xtrace settings.
@@ -43,7 +46,7 @@ module Bashcov
 
           @xtrace.close
 
-          @coverage = xtrace_thread.value # wait for the thread to return
+          @files = xtrace_thread.value # wait for the thread to return
         rescue XtraceError => e
           write_warning <<-WARNING
             encountered an error parsing Bash's output (error was:
@@ -52,7 +55,7 @@ module Bashcov
             LINENO. Aborting early; coverage report will be incomplete.
           WARNING
 
-          @coverage = e.files
+          @files = e.files
         end
       end
 
@@ -65,8 +68,6 @@ module Bashcov
       @result ||= begin
         find_bash_files!
         expunge_invalid_files!
-        mark_relevant_lines!
-
         convert_coverage
       end
     end
@@ -99,7 +100,7 @@ module Bashcov
         end
       end
 
-      inject_xtrace_flag! do
+      inject_env! do
         yield
       end
     end
@@ -108,14 +109,18 @@ module Bashcov
     # @yield [void] adds "xtrace" to +SHELLOPTS+ and then runs the provided
     #   block
     # @return [Object, ...] the value returned by the calling block
-    def inject_xtrace_flag!
+    def inject_env!
       existing_flags_s = ENV["SHELLOPTS"]
-      existing_flags = (existing_flags_s || "").split(":")
-      ENV["SHELLOPTS"] = (existing_flags | ["xtrace"]).join(":")
+      existing_bash_env = ENV["BASH_ENV"]
 
+      existing_flags = (existing_flags_s || "").split(":")
+
+      ENV["SHELLOPTS"] = (existing_flags | ["xtrace"]).join(":")
+      #ENV["BASH_ENV"] = "/home/matt/git/bashcov/ext/wraptrap.sh"
       yield
     ensure
       ENV["SHELLOPTS"] = existing_flags_s
+      ENV["BASH_ENV"] = existing_bash_env
     end
 
     # Add files which have not been executed at all (i.e. with no coverage)
@@ -124,36 +129,32 @@ module Bashcov
       return if Bashcov.skip_uncovered
 
       Pathname.glob("#{Bashcov.root_directory}/**/*.sh").each do |filename|
-        @coverage[filename] = [] unless @coverage.include?(filename)
+        files[filename] = Bashcov::SourceFile.new(filename) unless files.include?(filename)
       end
     end
 
     # @return [void]
     def expunge_invalid_files!
-      @coverage.each_key do |filename|
-        next if filename.file?
+      files.delete_if do |filename, *|
+        unless filename.file?
+          write_warning <<-WARNING
+            #{filename} was executed but has been deleted since then - it won't
+            be reported in coverage.
+          WARNING
 
-        @coverage.delete filename
-        write_warning <<-WARNING
-          #{filename} was executed but has been deleted since then - it won't
-          be reported in coverage.
-        WARNING
-      end
-    end
-
-    # @see Lexer
-    # @return [void]
-    def mark_relevant_lines!
-      @coverage.each_pair do |filename, coverage|
-        lexer = Lexer.new(filename, coverage)
-        lexer.uncovered_relevant_lines do |lineno|
-          @coverage[filename][lineno] = Bashcov::Line::UNCOVERED
+          true
         end
       end
     end
 
     def convert_coverage
-      Hash[@coverage.map { |filename, coverage| [filename.to_s, coverage] }]
+      coverage_pairs = files.map do |filename, source_file|
+        source_file.lex!(Lexer)
+        source_file.filter!(*Bashcov.filters)
+        [filename.to_s, source_file.to_coverage]
+      end
+
+      Hash[coverage_pairs]
     end
   end
 end

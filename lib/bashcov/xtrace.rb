@@ -4,6 +4,7 @@ require "pathname"
 require "securerandom"
 
 require "bashcov/errors"
+require "bashcov/source_file"
 
 module Bashcov
   # This class manages +xtrace+ output.
@@ -84,7 +85,7 @@ module Bashcov
     def read
       @field_stream.read = @read
 
-      field_count = FIELDS.length
+      field_count = FIELDS.length + 1
       fields = @field_stream.each(
         self.class.delimiter, field_count, PS4_START_REGEXP
       )
@@ -112,6 +113,8 @@ module Bashcov
     # @raise [XtraceError] when +lineno+ is not composed solely of digits,
     #   indicating that something has gone wrong with parsing the +PS4+ fields
     def parse_hit!(lineno, *paths)
+      cmd = paths.pop
+
       # If +LINENO+ isn't a series of digits, something has gone wrong. Add
       # +@files+ to the exception in order to propagate the existing coverage
       # data back to the {Bashcov::Runner} instance.
@@ -132,11 +135,14 @@ module Bashcov
 
       # For one-liners, +LINENO+ == 0. Do this to avoid an +IndexError+;
       # one-liners will be culled from the coverage results later on.
-      index = (lineno_i = lineno.to_i) > 1 ? lineno_i - 1 : 0
+      lineno = (lineno_i = lineno.to_i) >= 1 ? lineno_i : 1
 
-      @files[script] ||= []
-      @files[script][index] ||= 0
-      @files[script][index] += 1
+      prefix_match = PS4_START_REGEXP.match(cmd)
+      cmd.gsub!(prefix_match.to_s, '').chomp!
+
+      @files ||= {}
+      @files[script] ||= Bashcov::SourceFile.new(script)
+      @files[script].add_command(cmd, lineno, 1)
     end
 
     # Scans entries in the +PWD+ stack, checking whether +entry/$BASH_SOURCE+
@@ -147,7 +153,7 @@ module Bashcov
     # @return [Pathname] the resolved path to +bash_source+, if it exists;
     #   otherwise, +bash_source+ cleaned of redundant slashes and dots
     def find_script(bash_source)
-      script = @pwd_stack.reverse.map { |wd| wd + bash_source }.find(&:file?)
+      script = @pwd_stack.reverse_each.map { |wd| wd + bash_source }.find(&:file?)
       script.nil? ? bash_source.cleanpath : script.realpath
     end
 

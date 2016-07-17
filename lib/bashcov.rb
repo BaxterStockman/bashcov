@@ -14,7 +14,7 @@ module Bashcov
 
   # A +Struct+ to store Bashcov configuration
   Options = Struct.new(
-    *%i(skip_uncovered mute bash_path root_directory command)
+    *%i(skip_uncovered mute bash_path root_directory command filters dump)
   )
 
   class << self
@@ -59,8 +59,10 @@ module Bashcov
 
       @options.skip_uncovered   = false
       @options.mute             = false
+      @options.dump             = false
       @options.bash_path        = "/bin/bash"
       @options.root_directory   = Dir.getwd
+      @options.filters          = []
     end
 
   private
@@ -100,6 +102,10 @@ module Bashcov
         opts.on("-m", "--mute", "Do not print script output") do |m|
           options.mute = m
         end
+        opts.on("-d", "--dump", "Print the parsing results rather than generating coverage") do |d|
+          options.dump = d
+        end
+
         opts.on("--bash-path PATH", "Path to Bash executable") do |p|
           raise Errno::ENOENT, p unless File.file? p
           options.bash_path = p
@@ -108,7 +114,9 @@ module Bashcov
           raise Errno::ENOENT, d unless File.directory? d
           options.root_directory = d
         end
-
+        opts.on("--filter REGEXP", "Filter(s) for excluding command patterns") do |f|
+          options.filters << Regexp.new(f)
+        end
         opts.separator "\nCommon options:"
 
         opts.on_tail("-h", "--help", "Show this message") do

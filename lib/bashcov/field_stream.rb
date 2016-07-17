@@ -57,6 +57,8 @@ module Bashcov
       fields.each do |field|
         # If the current field is the start-of-fields match...
         if field =~ start_match
+          yield field
+          seen_fields += 1
           # Fill out any remaining (unparseable) fields with empty strings
           yield_remaining.call
 

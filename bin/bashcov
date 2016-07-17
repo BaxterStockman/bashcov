@@ -10,12 +10,20 @@ Bashcov.parse_options! ARGV
 
 runner = Bashcov::Runner.new Bashcov.command
 status = runner.run
-coverage = runner.result
 
-require "simplecov"
+if Bashcov.dump
+  require "yaml"
 
-SimpleCov.command_name Bashcov.fullname
-SimpleCov.root Bashcov.root_directory
-SimpleCov::Result.new(coverage).format!
+  dump = Hash[runner.files.map { |f, sf| [f.to_s, sf.dump] }]
+  puts dump.to_yaml
+else
+  coverage = runner.result
+
+  require "simplecov"
+
+  SimpleCov.command_name Bashcov.fullname
+  SimpleCov.root Bashcov.root_directory
+  SimpleCov::Result.new(coverage).format!
+end
 
 exit status.exitstatus

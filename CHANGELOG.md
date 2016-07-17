@@ -1,6 +1,10 @@
 ## Unreleased ([changes](https://github.com/infertux/bashcov/compare/v1.3.1...master))
 
-  * TBD
+  * [FEATURE] Add command line option for specifying regular expressions to
+              filter out certain commands or expressions from the coverage
+              statistics
+              (class `SourceFile` & `SourceFile::Line`)
+  * [FEATURE] Drop support for Ruby 2.0.0
 
 ## v1.3.1, 2016-02-19 ([changes](https://github.com/infertux/bashcov/compare/v1.3.0...v1.3.1))
 

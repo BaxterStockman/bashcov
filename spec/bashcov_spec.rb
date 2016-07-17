@@ -82,6 +82,15 @@ describe Bashcov do
         end
       end
 
+      context "with the --dump flag" do
+        before { @args << "--dump" }
+
+        it "sets it properly" do
+          subject
+          expect(Bashcov.dump).to be true
+        end
+      end
+
       context "with the --bash-path option" do
         context "given an existing path" do
           before { @args += ["--bash-path", "/bin/bash"] }
@@ -113,6 +122,20 @@ describe Bashcov do
           before(:each) { @args += ["--root", "/confident/this/does/not/exist/either"] }
 
           it_behaves_like "a fatal error"
+        end
+      end
+
+      context "with the --filter option" do
+        let(:filter_strings) { %w(^this tha?t$) }
+        before { filter_strings.each { |f| @args += ["--filter", f] } }
+
+        it "converts its arguments to regular expressions" do
+          subject
+
+          Bashcov.filters.tap do |filters|
+            expect(filters).to all(be_a(Regexp))
+            expect(filters.map(&:source)).to contain_exactly(*filter_strings)
+          end
         end
       end
 
