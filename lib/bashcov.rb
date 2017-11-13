@@ -14,7 +14,7 @@ module Bashcov
 
   # A +Struct+ to store Bashcov configuration
   Options = Struct.new(
-    *%i(skip_uncovered mute bash_path root_directory command filters dump)
+    *%i(skip_uncovered mute bash_path root_directory command filters dump show_ps4)
   )
 
   class << self
@@ -34,6 +34,8 @@ module Bashcov
       rescue OptionParser::ParseError, Errno::ENOENT => e
         abort "#{option_parser.program_name}: #{e.message}"
       end
+
+      return if options.show_ps4
 
       if args.empty?
         abort("You must give exactly one command to execute.")
@@ -60,6 +62,7 @@ module Bashcov
       @options.skip_uncovered   = false
       @options.mute             = false
       @options.dump             = false
+      @options.show_ps4         = false
       @options.bash_path        = "/bin/bash"
       @options.root_directory   = Dir.getwd
       @options.filters          = []
@@ -104,6 +107,9 @@ module Bashcov
         end
         opts.on("-d", "--dump", "Print the parsing results rather than generating coverage") do |d|
           options.dump = d
+        end
+        opts.on("--show-ps4", "Print the PS4 used to track command execution") do |p|
+          options.show_ps4 = p
         end
 
         opts.on("--bash-path PATH", "Path to Bash executable") do |p|

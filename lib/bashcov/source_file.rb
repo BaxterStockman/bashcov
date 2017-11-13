@@ -147,6 +147,8 @@ module Bashcov
 
         continuation_line = false
         file.each_line do |line|
+          line.chomp!
+
           # @see +SimpleCov::SourceFile::Command+
           # .never? => not skipped and +nil+ for coverage
           if lexer.relevant?(line)
@@ -159,6 +161,14 @@ module Bashcov
             end
           else
             lines[file.lineno] = {}
+          end
+
+          if line.empty?
+            puts "#=> Line #{file.lineno} of #{file.path} is empty."
+          end
+
+          if line.empty? and !lines[file.lineno].empty?
+            $stderr.puts "command executed at #{file.lineno}, but there's nothing there!"
           end
 
           # Line ends with '\', meaning that the next non-comment,
@@ -177,14 +187,13 @@ module Bashcov
     #   current line
     def each
       return enum_for(__method__) unless block_given?
-      #lines[1..-1].map { |l| l.nil? ? [] : l.values }.each(&Proc.new)
       self[1..-1].each(&Proc.new)
     end
 
     # @return [Hash{Integer => Array<Command>}] A +Hash+ mapping line numbers
     #   to +Array+s of the {Command}s appearing on that line
     def to_h
-      Hash[each.each_with_index.map { |l, i| [i + 1, l] }]
+      Hash[each.each_with_index.reject { |l, i| l.empty? }.map { |l, i| [i + 1, l] }]
     end
 
     # @return [Array<Integer>]  An +Array+ in which indices represent line

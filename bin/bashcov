@@ -8,6 +8,13 @@ require "bashcov"
 
 Bashcov.parse_options! ARGV
 
+if Bashcov.show_ps4
+  require 'shellwords'
+  Bashcov::Xtrace.delimiter = ':'
+  puts "PS4=#{Shellwords.shellescape(Bashcov::Xtrace.ps4)}"
+  exit 0
+end
+
 runner = Bashcov::Runner.new Bashcov.command
 status = runner.run
 
