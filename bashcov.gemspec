@@ -24,6 +24,7 @@ Gem::Specification.new do |gem|
   gem.required_ruby_version = ">= 2.2.7"
 
   gem.add_dependency "simplecov", "~> 0.11"
+  gem.add_dependency "parslet"
 
   gem.add_development_dependency "rake"
   gem.add_development_dependency "rspec"
