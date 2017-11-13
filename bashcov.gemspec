@@ -23,6 +23,7 @@ Gem::Specification.new do |gem|
 
   gem.required_ruby_version = ">= 2.2.7"
 
+  gem.add_dependency "rouge",     "~> 2.1.0"
   gem.add_dependency "simplecov", "~> 0.11"
 
   gem.add_development_dependency "rake"
